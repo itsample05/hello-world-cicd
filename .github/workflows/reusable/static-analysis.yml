@@ -1,0 +1,44 @@
+name: Static analysis
+on:
+  workflow_call:
+    inputs:
+      publish-pages: { required: true, type: boolean }
+    secrets:
+      SONAR_TOKEN: { required: false }
+jobs:
+  analyse:
+    runs-on: ubuntu-latest
+    permissions: { contents: read }
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17', cache: maven }
+      - run: mvn -B verify checkstyle:check spotbugs:check
+      - if: ${{ secrets.SONAR_TOKEN != '' }}
+        env: { SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }} }
+        run: mvn -B sonar:sonar -Dsonar.token="$SONAR_TOKEN"
+      - run: |
+          mkdir -p site
+          cp -R target/site/jacoco site/coverage
+          cp target/checkstyle-result.xml site/ 2>/dev/null || true
+          cp target/spotbugsXml.xml site/spotbugs.xml 2>/dev/null || true
+          cat > site/index.html <<'EOF'
+          <!doctype html><title>Static Analysis</title><h1>Static Analysis Results</h1><ul><li><a href="coverage/index.html">JaCoCo coverage</a></li><li><a href="checkstyle-result.xml">Checkstyle</a></li><li><a href="spotbugs.xml">SpotBugs</a></li></ul>
+          EOF
+      - uses: actions/upload-artifact@v4
+        with: { name: static-analysis-${{ github.sha }}, path: site, retention-days: 30 }
+      - if: ${{ inputs.publish-pages }}
+        uses: actions/upload-pages-artifact@v3
+        with: { path: site }
+  publish:
+    needs: analyse
+    if: ${{ inputs.publish-pages }}
+    runs-on: ubuntu-latest
+    permissions: { pages: write, id-token: write }
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
