@@ -8,6 +8,12 @@ concurrency:
   group: production
   cancel-in-progress: false
 
+# ADD THIS: Essential for AWS OIDC authentication and GitHub Pages deployment
+permissions:
+  contents: read
+  id-token: write
+  pages: write
+
 jobs:
   analysis:
     uses: ./.github/workflows/static-analysis.yml
@@ -27,7 +33,7 @@ jobs:
   deploy:
     needs: image
     uses: ./.github/workflows/deploy-aws.yml
-    secrets: inherit # <-- CRITICAL FIX: Added this to pass your AWS role and Docker credentials
+    secrets: inherit
     with:
       image: ${{ secrets.DOCKERHUB_USERNAME }}/hello-world-app:${{ github.sha }}
       aws-region: us-east-1

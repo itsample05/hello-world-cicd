@@ -8,6 +8,12 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# ADD THIS: Grants the parent workflow permission to delegate id-token and pages to the child workflow
+permissions:
+  contents: read
+  id-token: write
+  pages: write
+
 jobs:
   analysis:
     uses: ./.github/workflows/static-analysis.yml
