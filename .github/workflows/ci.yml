@@ -10,14 +10,14 @@ concurrency:
 
 jobs:
   analysis:
-    uses: ./.github/workflows/reusable/static-analysis.yml
+    uses: ./.github/workflows/static-analysis.yml
     with:
       publish-pages: false
     secrets: inherit
 
   image:
     needs: analysis
-    uses: ./.github/workflows/reusable/build-and-push.yml
+    uses: ./.github/workflows/build-and-push.yml
     with:
       image-name: hello-world-app
       image-tag: ${{ github.sha }}

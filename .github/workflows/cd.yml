@@ -11,14 +11,14 @@ concurrency:
 
 jobs:
   analysis:
-    uses: ./.github/workflows/reusable/static-analysis.yml
+    uses: ./.github/workflows/static-analysis.yml
     with:
       publish-pages: true
     secrets: inherit
 
   image:
     needs: analysis
-    uses: ./.github/workflows/reusable/build-and-push.yml
+    uses: ./.github/workflows/build-and-push.yml
     with:
       image-name: hello-world-app
       image-tag: ${{ github.sha }}
@@ -27,7 +27,7 @@ jobs:
 
   deploy:
     needs: image
-    uses: ./.github/workflows/reusable/deploy-aws.yml
+    uses: ./.github/workflows/deploy-aws.yml
     secrets: inherit # <-- CRITICAL FIX: Added this to pass your AWS role and Docker credentials
     with:
       image: ${{ secrets.DOCKERHUB_USERNAME }}/hello-world-app:${{ github.sha }}
