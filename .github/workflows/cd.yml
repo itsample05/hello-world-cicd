@@ -31,13 +31,13 @@ jobs:
     secrets: inherit
 
   deploy:
-    needs: image
-    uses: ./.github/workflows/deploy-aws.yml
-    secrets: inherit
-    with:
-      image: ${{ secrets.DOCKERHUB_USERNAME }}/hello-world-app:${{ github.sha }}
-      aws-region: us-east-1
-      role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
-      cluster: hello-world-cluster
-      service: hello-world-service
-      task-family: hello-world-task
+   needs: image
+   uses: ./.github/workflows/deploy-aws.yml
+   secrets: inherit
+   with:
+    image: ${{ vars.DOCKERHUB_USERNAME }}/hello-world-app:${{ github.sha }}
+    aws-region: us-east-1
+    role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+    cluster: hello-world-cluster
+    service: hello-world-service
+    task-family: hello-world-task
