@@ -1,7 +1,7 @@
 name: CD
 on:
   push:
-    branches: [main, master]
+    branches: [main]
 concurrency: { group: production, cancel-in-progress: false }
 jobs:
   analysis:
