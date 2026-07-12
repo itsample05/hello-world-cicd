@@ -19,7 +19,9 @@ jobs:
     uses: ./.github/workflows/static-analysis.yml
     with:
       publish-pages: false
-    secrets: inherit
+    secrets: 
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
   image:
     needs: analysis
