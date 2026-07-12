@@ -23,3 +23,7 @@ jobs:
         with: { task-definition: clean.json, container-name: app, image: ${{ inputs.image }} }
       - uses: aws-actions/amazon-ecs-deploy-task-definition@v2
         with: { task-definition: ${{ steps.render.outputs.task-definition }}, service: ${{ inputs.service }}, cluster: ${{ inputs.cluster }}, wait-for-service-stability: true }
+      - name: Start the service and wait for the application
+        run: |
+          aws ecs update-service --cluster "${{ inputs.cluster }}" --service "${{ inputs.service }}" --desired-count 1
+          aws ecs wait services-stable --cluster "${{ inputs.cluster }}" --services "${{ inputs.service }}"
