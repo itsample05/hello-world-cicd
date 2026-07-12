@@ -3,19 +3,33 @@ name: Deploy ECS
 on:
   workflow_call:
     inputs:
-      image: { required: true, type: string }
-      aws-region: { required: true, type: string }
-      role-to-assume: { required: true, type: string }
-      cluster: { required: true, type: string }
-      service: { required: true, type: string }
-      task-family: { required: true, type: string }
+      image:
+        required: true
+        type: string
+      aws-region:
+        required: true
+        type: string
+      role-to-assume:
+        required: true
+        type: string
+      cluster:
+        required: true
+        type: string
+      service:
+        required: true
+        type: string
+      task-family:
+        required: true
+        type: string
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     permissions:
       id-token: write
       contents: read
+
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -24,29 +38,41 @@ jobs:
           aws-region: ${{ inputs.aws-region }}
 
       - name: Download active task definition
-        id: task
         run: |
           aws ecs describe-task-definition \
             --task-definition "${{ inputs.task-family }}" \
             --query taskDefinition \
             --output json > task-definition.json
 
-      - name: Clean task definition for registration
+      - name: Clean task definition
         run: |
-          jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)' task-definition.json > clean.json
+          jq 'del(
+            .taskDefinitionArn,
+            .revision,
+            .status,
+            .requiresAttributes,
+            .compatibilities,
+            .registeredAt,
+            .registeredBy
+          )' task-definition.json > clean.json
 
-      - name: Render Amazon ECS task definition
+      - name: Get container name
+        id: container
+        run: |
+          echo "name=$(jq -r '.containerDefinitions[0].name' clean.json)" >> $GITHUB_OUTPUT
+
+      - name: Render new task definition
         id: render
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
           task-definition: clean.json
-          container-name: ${{ inputs.task-family }} # <-- CRITICAL FIX: Dynamically matched container name
+          container-name: ${{ steps.container.outputs.name }}
           image: ${{ inputs.image }}
 
-      - name: Deploy Amazon ECS task definition
+      - name: Deploy to Amazon ECS
         uses: aws-actions/amazon-ecs-deploy-task-definition@v2
         with:
           task-definition: ${{ steps.render.outputs.task-definition }}
           service: ${{ inputs.service }}
           cluster: ${{ inputs.cluster }}
-          wait-for-service-stability: true # <-- This handles waiting cleanly!
+          wait-for-service-stability: true
