@@ -24,11 +24,13 @@ Feature-branch reports are retained as GitHub Actions artifacts. The latest defa
 
 ## One-time setup
 
+For the exact AWS-before-GitHub order, see [AWS bootstrap](docs/aws-bootstrap.md).
+
 1. Create a public Docker Hub repository called `hello-world-app` (or update the workflow name). ECS can pull a public Docker Hub image without storing Docker Hub credentials in AWS.
 2. In GitHub **Settings → Pages**, set the source to **GitHub Actions**.
-3. Copy `terraform/terraform.tfvars.example` to `terraform.tfvars`, replace both placeholders, then run `terraform init` and `terraform apply` from `terraform/` using a suitably limited administrator/bootstrap identity.
+3. Run `bash scripts/bootstrap.sh --github-repository 'YOUR_GITHUB_USER/YOUR_REPOSITORY'` in Git Bash/WSL, or `./scripts/bootstrap.ps1 -GitHubRepository 'YOUR_GITHUB_USER/YOUR_REPOSITORY'` in PowerShell. It creates the AWS OIDC provider, IAM deployment role, VPC, ALB, and ECS service with zero tasks; no local Docker image is required. When GitHub CLI is signed in, it also sets `AWS_DEPLOY_ROLE_ARN` automatically. It needs one-time AWS bootstrap credentials locally.
 4. Add repository secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`.
-5. Add repository variable `AWS_DEPLOY_ROLE_ARN` using Terraform output `github_deploy_role_arn`. No long-lived AWS access keys are stored in GitHub.
+5. If GitHub CLI was unavailable, add repository variable `AWS_DEPLOY_ROLE_ARN` using Terraform output `github_deploy_role_arn`. No long-lived AWS access keys are stored in GitHub.
 6. Push to a feature branch, then merge it to the repository's default branch. Terraform output `application_url` is the public URL.
 
 ## Design notes

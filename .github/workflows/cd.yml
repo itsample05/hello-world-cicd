@@ -1,0 +1,43 @@
+name: CD
+
+on:
+  push:
+    branches: ["main"]
+
+concurrency:
+  group: production
+  cancel-in-progress: false
+
+# ADD THIS: Essential for AWS OIDC authentication and GitHub Pages deployment
+permissions:
+  contents: read
+  id-token: write
+  pages: write
+
+jobs:
+  analysis:
+    uses: ./.github/workflows/static-analysis.yml
+    with:
+      publish-pages: true
+    secrets: inherit
+
+  image:
+    needs: analysis
+    uses: ./.github/workflows/build-and-push.yml
+    with:
+      image-name: hello-world-app
+      image-tag: ${{ github.sha }}
+      publish-latest: true
+    secrets: inherit
+
+  deploy:
+   needs: image
+   uses: ./.github/workflows/deploy-aws.yml
+   secrets: inherit
+   with:
+    image: ${{ vars.DOCKERHUB_USERNAME }}/hello-world-app:${{ github.sha }}
+    aws-region: us-east-1
+    role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+    cluster: hello-world-cluster
+    service: hello-world-service
+    task-family: hello-world-task

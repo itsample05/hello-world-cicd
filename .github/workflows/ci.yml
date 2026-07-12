@@ -1,15 +1,31 @@
 name: CI
+
 on:
   push:
     branches: ["feature/**", "feat/**", "fix/**", "hotfix/**"]
-concurrency: { group: ci-${{ github.ref }}, cancel-in-progress: true }
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# ADD THIS: Grants the parent workflow permission to delegate id-token and pages to the child workflow
+permissions:
+  contents: read
+  id-token: write
+  pages: write
+
 jobs:
   analysis:
-    uses: ./.github/workflows/reusable/static-analysis.yml
-    with: { publish-pages: false }
+    uses: ./.github/workflows/static-analysis.yml
+    with:
+      publish-pages: false
     secrets: inherit
+
   image:
     needs: analysis
-    uses: ./.github/workflows/reusable/build-and-push.yml
-    with: { image-name: hello-world-app, image-tag: ${{ github.sha }}, publish-latest: false }
+    uses: ./.github/workflows/build-and-push.yml
+    with:
+      image-name: hello-world-app
+      image-tag: ${{ github.sha }}
+      publish-latest: false
     secrets: inherit

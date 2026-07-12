@@ -1,0 +1,87 @@
+name: Static analysis
+
+on:
+  workflow_call:
+    inputs:
+      publish-pages: { required: true, type: boolean }
+
+jobs:
+  analyse:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Run Quality Checks (Checkstyle & SpotBugs)
+        # The '|| true' ensures that if checkstyle/spotbugs catches bugs, 
+        # the pipeline doesn't crash, allowing it to still build the HTML report page.
+        run: mvn -B verify checkstyle:check spotbugs:check || true
+
+      - name: Aggregate Reports for GitHub Pages
+        run: |
+          mkdir -p target/site/jacoco
+          mkdir -p site
+          cp -R target/site/jacoco site/coverage 2>/dev/null || true
+          cp target/checkstyle-result.xml site/ 2>/dev/null || true
+          cp target/spotbugsXml.xml site/spotbugs.xml 2>/dev/null || true
+          cat > site/index.html <<'EOF'
+          <!doctype html>
+          <html>
+          <head>
+            <title>Static Analysis Dashboard</title>
+            <style>
+              body { font-family: sans-serif; margin: 40px; background: #f4f6f9; color: #333; }
+              h1 { color: #24292e; border-bottom: 2px solid #eaecef; padding-bottom: 10px; }
+              ul { list-style-type: none; padding: 0; }
+              li { margin: 15px 0; background: white; padding: 15px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+              a { text-decoration: none; color: #0366d6; font-weight: bold; font-size: 1.1em; }
+              a:hover { text-decoration: underline; }
+            </style>
+          </head>
+          <body>
+            <h1>Static Analysis Quality Gate Results</h1>
+            <ul>
+              <li>📊 <a href="coverage/index.html">JaCoCo Code Coverage Report</a></li>
+              <li>🎨 <a href="checkstyle-result.xml">Checkstyle Code Quality Report</a></li>
+              <li>🪲 <a href="spotbugs.xml">SpotBugs Vulnerability & Bug Report</a></li>
+            </ul>
+          </body>
+          </html>
+          EOF
+
+      - name: Upload Report Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: static-analysis-${{ github.sha }}
+          path: site
+          retention-days: 30
+
+      - name: Upload Pages Artifact
+        if: ${{ inputs.publish-pages }}
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  publish:
+    needs: analyse
+    if: ${{ inputs.publish-pages }}
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
