@@ -2,7 +2,7 @@
 
 ## Overall verdict
 
-It is a strong outline and covers nearly every requested category, but I would not submit it unchanged. It contains several functional and review-level problems that are easy for an interviewer to spot.
+It is strong outline and covers nearly every requested category, but I would not submit it unchanged. It contains several functional and review-level problems that are easy for an interviewer to spot.
 
 ## What was good
 
