@@ -21,10 +21,8 @@ jobs:
           java-version: '17'
           cache: maven
 
-      - name: Run Quality Checks (Checkstyle & SpotBugs)
-        # The '|| true' ensures that if checkstyle/spotbugs catches bugs, 
-        # the pipeline doesn't crash, allowing it to still build the HTML report page.
-        run: mvn -B verify checkstyle:check spotbugs:check || true
+      - name: Run tests, build, and quality checks
+        run: mvn -B verify checkstyle:check spotbugs:check
 
       - name: Aggregate Reports for GitHub Pages
         run: |

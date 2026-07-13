@@ -40,11 +40,14 @@ resource "aws_ecs_task_definition" "app" {
 }
 
 resource "aws_ecs_service" "app" {
-  name                              = "${var.app_name}-service"
-  cluster                           = aws_ecs_cluster.this.id
-  task_definition                   = aws_ecs_task_definition.app.arn
-  desired_count                     = 0
+  name            = "${var.app_name}-service"
+  cluster         = aws_ecs_cluster.this.id
+  task_definition = aws_ecs_task_definition.app.arn
+  # There is one private subnet in each configured Availability Zone. Keeping
+  # the desired count equal to that number provides one Fargate task per AZ.
+  desired_count                     = length(aws_subnet.private)
   launch_type                       = "FARGATE"
+  availability_zone_rebalancing     = "ENABLED"
   health_check_grace_period_seconds = 60
 
   network_configuration {
@@ -65,7 +68,9 @@ resource "aws_ecs_service" "app" {
   }
 
   lifecycle {
-    ignore_changes = [desired_count, task_definition]
+    # The deployment workflow registers task-definition revisions outside of
+    # Terraform. Capacity remains Terraform-managed.
+    ignore_changes = [task_definition]
   }
 
   depends_on = [aws_lb_listener.http]

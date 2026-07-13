@@ -8,7 +8,6 @@ concurrency:
   group: production
   cancel-in-progress: false
 
-# ADD THIS: Essential for AWS OIDC authentication and GitHub Pages deployment
 permissions:
   contents: read
   id-token: write
@@ -27,7 +26,10 @@ jobs:
     with:
       image-name: hello-world-app
       image-tag: ${{ github.sha }}
+      dockerhub-username: ${{ vars.DOCKERHUB_USERNAME }}
+      publish-image: true
       publish-latest: true
+      run-trivy: true
     secrets: inherit
 
   deploy:

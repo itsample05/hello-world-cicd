@@ -2,8 +2,7 @@ name: CI
 
 on:
   push:
-    branches: ["feature/**", "feat/**", "fix/**", "hotfix/**"]
-
+    branches-ignore: ["main"]
   pull_request:
     branches:
       - main
@@ -12,11 +11,8 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-# ADD THIS: Grants the parent workflow permission to delegate id-token and pages to the child workflow
 permissions:
   contents: read
-  id-token: write
-  pages: write
 
 jobs:
   analysis:
@@ -25,11 +21,16 @@ jobs:
       publish-pages: false
     secrets: inherit
 
-  image:
+  image-security:
     needs: analysis
+    # Pull requests run the complete CI validation, including a local image
+    # build and Trivy scan. They never authenticate with or push to Docker Hub.
+    if: ${{ github.event_name == 'pull_request' }}
     uses: ./.github/workflows/build-and-push.yml
     with:
       image-name: hello-world-app
       image-tag: ${{ github.sha }}
+      dockerhub-username: ${{ vars.DOCKERHUB_USERNAME }}
+      publish-image: false
       publish-latest: false
-    secrets: inherit
+      run-trivy: true
