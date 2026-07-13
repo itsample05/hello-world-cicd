@@ -39,7 +39,7 @@ GitHub Pages receives the default-branch quality report. Every analysis run also
 ## Prerequisites
 
 - An AWS account with permission to perform the one-time bootstrap, plus AWS CLI credentials configured locally.
-- Terraform 1.x and either Git Bash/WSL or PowerShell.
+- Terraform 1.x and Git Bash or WSL.
 - A GitHub repository with Actions enabled and a Docker Hub repository (for example, `hello-world-app`).
 - A Docker Hub access token with permission to push to that repository.
 - GitHub Pages configured to use **GitHub Actions** as its source.
@@ -48,13 +48,13 @@ GitHub Pages receives the default-branch quality report. Every analysis run also
 ## One-time setup
 
 1. Copy `terraform/terraform.tfvars.example` to `terraform/terraform.tfvars` and set `github_repository` to `OWNER/REPOSITORY`.
-2. Bootstrap AWS from the repository root:
+2. Manually run `terraform init`, `terraform validate`, `terraform plan -out=tfplan`, and then `terraform apply tfplan` from `terraform/` after you have reviewed the plan. Next, run:
 
-   ```powershell
-   ./scripts/bootstrap.ps1 -GitHubRepository 'OWNER/REPOSITORY'
+   ```bash
+   bash scripts/bootstrap.sh
    ```
 
-   Or use `bash scripts/bootstrap.sh --github-repository 'OWNER/REPOSITORY'` from Git Bash or WSL. The scripts create the OIDC trust, deployment role, network, ALB, ECS cluster, service, and log group. See [AWS bootstrap](docs/aws-bootstrap.md) for the detailed order.
+   This script verifies the Terraform-created deployment-role ARN and saves it as `AWS_DEPLOY_ROLE_ARN` in GitHub. It never runs `terraform init`, `terraform plan`, or `terraform apply`. See [AWS bootstrap](docs/aws-bootstrap.md) for the manual review-and-deploy steps.
 3. In GitHub repository **Settings → Secrets and variables → Actions**, add:
 
    | Type | Name | Value |
