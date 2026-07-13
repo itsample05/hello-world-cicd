@@ -16,15 +16,12 @@ concurrency:
 
 permissions:
   contents: read
-  id-token: write
-  pages: write
 
 jobs:
   static-analysis:
     uses: ./.github/workflows/static-analysis.yml
     with:
       publish-pages: false
-    secrets: inherit
 
   build-and-scan-image:
     needs: static-analysis
