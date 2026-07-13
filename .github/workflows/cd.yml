@@ -1,4 +1,6 @@
-name: CD
+name: CD - Release and Deploy
+
+run-name: Release ${{ github.sha }} to production
 
 on:
   push:
@@ -14,14 +16,14 @@ permissions:
   pages: write
 
 jobs:
-  analysis:
+  static-analysis:
     uses: ./.github/workflows/static-analysis.yml
     with:
       publish-pages: true
     secrets: inherit
 
-  image:
-    needs: analysis
+  build-and-scan-image:
+    needs: static-analysis
     uses: ./.github/workflows/build-and-push.yml
     with:
       image-name: hello-world-app
@@ -32,14 +34,14 @@ jobs:
       run-trivy: true
     secrets: inherit
 
-  deploy:
-   needs: image
-   uses: ./.github/workflows/deploy-aws.yml
-   secrets: inherit
-   with:
-    image: ${{ vars.DOCKERHUB_USERNAME }}/hello-world-app:${{ github.sha }}
-    aws-region: us-east-1
-    role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
-    cluster: hello-world-cluster
-    service: hello-world-service
-    task-family: hello-world-task
+  deploy-to-ecs:
+    needs: build-and-scan-image
+    uses: ./.github/workflows/deploy-aws.yml
+    secrets: inherit
+    with:
+      image: ${{ vars.DOCKERHUB_USERNAME }}/hello-world-app:${{ github.sha }}
+      aws-region: us-east-1
+      role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+      cluster: hello-world-cluster
+      service: hello-world-service
+      task-family: hello-world-task

@@ -1,4 +1,7 @@
-name: CI
+name: CI - Validate
+
+run-name: >-
+  ${{ github.event_name == 'pull_request' && format('PR #{0}: {1}', github.event.pull_request.number, github.event.pull_request.title) || format('Validation: {0} ({1})', github.ref_name, github.sha) }}
 
 on:
   push:
@@ -17,14 +20,14 @@ permissions:
   pages: write
 
 jobs:
-  analysis:
+  static-analysis:
     uses: ./.github/workflows/static-analysis.yml
     with:
       publish-pages: false
     secrets: inherit
 
-  image-security:
-    needs: analysis
+  build-and-scan-image:
+    needs: static-analysis
     # Pull requests run the complete CI validation, including a local image
     # build and Trivy scan. They never authenticate with or push to Docker Hub.
     if: ${{ github.event_name == 'pull_request' }}

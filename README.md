@@ -1,5 +1,8 @@
 # Hello World on Amazon ECS
 
+[![CI](https://github.com/itsample05/hello-world-cicd/actions/workflows/ci.yml/badge.svg)](https://github.com/itsample05/hello-world-cicd/actions/workflows/ci.yml)
+[![CD](https://github.com/itsample05/hello-world-cicd/actions/workflows/cd.yml/badge.svg)](https://github.com/itsample05/hello-world-cicd/actions/workflows/cd.yml)
+
 This repository packages a Spring Boot service as a container and deploys it to Amazon ECS on Fargate. GitHub Actions validates every change, publishes only approved `main` builds, and rolls those builds out through an Application Load Balancer (ALB).
 
 ## Architecture
@@ -40,14 +43,13 @@ GitHub Pages receives the default-branch quality report. Every analysis run also
 
 - An AWS account with permission to perform the one-time bootstrap, plus AWS CLI credentials configured locally.
 - Terraform 1.x and Git Bash or WSL.
-- A GitHub repository with Actions enabled and a Docker Hub repository (for example, `hello-world-app`).
-- A Docker Hub access token with permission to push to that repository.
+- A GitHub repository with Actions enabled.
+- A Docker Hub access DOCKERHUB_TOKEN and DOCKERHUB_USERNAME
 - GitHub Pages configured to use **GitHub Actions** as its source.
-- Java 17 and Maven are only needed for local application development; Docker is needed for local container testing.
 
 ## One-time setup
 
-1. Copy `terraform/terraform.tfvars.example` to `terraform/terraform.tfvars` and set `github_repository` to `OWNER/REPOSITORY`.
+1. Copy `terraform/terraform.tfvars.example` to `terraform/terraform.tfvars` 
 2. Manually run `terraform init`, `terraform validate`, `terraform plan -out=tfplan`, and then `terraform apply tfplan` from `terraform/` after you have reviewed the plan. Next, run:
 
    ```bash
@@ -61,17 +63,9 @@ GitHub Pages receives the default-branch quality report. Every analysis run also
    | --- | --- | --- |
    | Secret | `DOCKERHUB_TOKEN` | Docker Hub access token |
    | Variable | `DOCKERHUB_USERNAME` | Docker Hub namespace/user name |
-   | Variable | `AWS_DEPLOY_ROLE_ARN` | Terraform output `github_deploy_role_arn` |
+   | Variable | `AWS_DEPLOY_ROLE_ARN` | Terraform output `github_deploy_role_arn` | # this will be added automatically
 4. In GitHub **Settings → Pages**, choose **GitHub Actions** as the build source.
 5. Push a feature branch, open a pull request to `main`, and merge it after the pull-request checks pass. The main-branch workflow publishes the image and deploys it. Retrieve the endpoint with Terraform output `application_url`.
-
-## Local validation
-
-```powershell
-mvn verify checkstyle:check spotbugs:check
-docker build -t hello-world-app:local .
-docker run --rm -p 8080:8080 hello-world-app:local
-```
 
 The application endpoint is available through the ALB after deployment; local container testing exposes the same application on port 8080.
 

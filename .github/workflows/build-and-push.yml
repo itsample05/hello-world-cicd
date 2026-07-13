@@ -13,7 +13,7 @@ on:
       DOCKERHUB_TOKEN: { required: false }
 
 jobs:
-  image:
+  build-and-scan-image:
     runs-on: ubuntu-latest
     permissions:
       contents: read
