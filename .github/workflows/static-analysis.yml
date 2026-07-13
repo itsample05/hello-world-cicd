@@ -6,7 +6,7 @@ on:
       publish-pages: { required: true, type: boolean }
 
 jobs:
-  static-analysis:
+  analysis:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -82,7 +82,7 @@ jobs:
         with:
           path: site
 
-  publish-analysis-report:
+  publish-report:
     needs: static-analysis
     if: ${{ inputs.publish-pages }}
     runs-on: ubuntu-latest
