@@ -1,5 +1,8 @@
 # Hello World on Amazon ECS
 
+[![CI](https://github.com/itsample05/hello-world-cicd/actions/workflows/ci.yml/badge.svg)](https://github.com/itsample05/hello-world-cicd/actions/workflows/ci.yml)
+[![CD](https://github.com/itsample05/hello-world-cicd/actions/workflows/cd.yml/badge.svg)](https://github.com/itsample05/hello-world-cicd/actions/workflows/cd.yml)
+
 This repository packages a Spring Boot service as a container and deploys it to Amazon ECS on Fargate. GitHub Actions validates every change, publishes only approved `main` builds, and rolls those builds out through an Application Load Balancer (ALB).
 
 ## Architecture
