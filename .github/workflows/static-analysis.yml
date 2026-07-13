@@ -83,7 +83,7 @@ jobs:
           path: site
 
   publish-report:
-    needs: static-analysis
+    needs: analysis
     if: ${{ inputs.publish-pages }}
     runs-on: ubuntu-latest
     permissions:
