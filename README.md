@@ -1,106 +1,316 @@
-# Hello World on Amazon ECS
+# Hello World on Amazon ECS (Fargate)
 
 [![CI](https://github.com/itsample05/hello-world-cicd/actions/workflows/ci.yml/badge.svg)](https://github.com/itsample05/hello-world-cicd/actions/workflows/ci.yml)
 [![CD](https://github.com/itsample05/hello-world-cicd/actions/workflows/cd.yml/badge.svg)](https://github.com/itsample05/hello-world-cicd/actions/workflows/cd.yml)
 
-This project builds a Spring Boot service into a Docker image and deploys it to Amazon ECS on Fargate. GitHub Actions validates changes, publishes approved `main` builds, and deploys them through an Application Load Balancer (ALB).
+A production-grade demonstration of a **Spring Boot** application built, validated, containerized, and deployed to **Amazon ECS on Fargate** using **Terraform** and **modular GitHub Actions**.
 
-## Architecture
+This repository implements the DevOps assignment using industry-standard security, automation, and CI/CD best practices.
+
+---
+
+# 🚀 Assignment Compliance Matrix
+
+| Requirement | Implementation | Best Practice |
+|-------------|----------------|---------------|
+| **Java Compilation & Verification** | Performed by reusable `static-analysis.yml` workflow using Maven | Maven dependency caching for faster builds |
+| **Static Code Analysis** | Checkstyle, SpotBugs and JaCoCo integrated | Prevents low-quality code from progressing through the pipeline |
+| **Publish Reports** | HTML reports published to GitHub Pages on successful `main` builds | Feature branches cannot overwrite production reports |
+| **Docker Image Build & Push** | Multi-stage Docker build with Docker Buildx | Immutable SHA tagging and Docker layer caching |
+| **Container Security** | Trivy vulnerability scanning before publishing image | Blocks builds containing High/Critical vulnerabilities |
+| **AWS Deployment** | ECS Fargate behind Application Load Balancer | Zero public IPs on containers; application runs in private subnets |
+
+---
+
+# 🏗️ Architecture
 
 ```text
-Internet
-   |
-Public ALB (HTTP, port 80)
-   |
-   +-- target group / health check
-           |
-Private subnet, AZ 1       Private subnet, AZ 2
-ECS Fargate task           ECS Fargate task
-           |                       |
-           +---- CloudWatch Logs --+
-
-GitHub Actions -- OIDC --> AWS deployment role --> ECS service
-GitHub Actions -- Docker Hub token --> Docker Hub image repository
+                    Internet
+                        │
+                        ▼
+           +-------------------------+
+           | Application Load Balancer|
+           |  Public Subnets (2 AZs) |
+           +------------+------------+
+                        │
+                HTTP : 8080
+                        │
+          +-------------+-------------+
+          │                           │
+          ▼                           ▼
+ +------------------+       +------------------+
+ | Private Subnet   |       | Private Subnet   |
+ | ECS Fargate Task |       | ECS Fargate Task |
+ +---------+--------+       +---------+--------+
+           │                          │
+           └──────────┬───────────────┘
+                      ▼
+              Amazon CloudWatch Logs
 ```
 
-Terraform creates two Availability Zones, public ALB subnets, and private ECS subnets. The ECS desired count equals the number of private subnets, giving one task per Availability Zone. The ALB is the only internet-facing component; tasks accept port 8080 traffic only from the ALB.
+---
 
-> This demonstration uses one NAT gateway to reduce cost. For production availability, use one NAT gateway and private route table per Availability Zone. The supplied ALB is HTTP-only; HTTPS needs a domain, ACM certificate, and a port-443 listener.
+# 🔒 Security Highlights
 
-## CI/CD workflow
+- **OIDC Authentication**
+  - GitHub Actions authenticates to AWS using OpenID Connect.
+  - No long-lived AWS Access Keys are stored in GitHub.
 
-| Event | Activity | External effect |
-| --- | --- | --- |
-| Push to any non-`main` branch | Tests, package build, Checkstyle, SpotBugs, JaCoCo | No image build, scan, publish, or deployment |
-| Pull request to `main` | The same validation, local Docker build, and Trivy image scan | No Docker Hub login/push or deployment |
-| Push/merge to `main` | Validation, GitHub Pages report, Docker build, Trivy scan, image publishing, ECS deployment | Publishes immutable SHA image, `latest`, and deploys |
+- **Private ECS Tasks**
+  - Containers run in private subnets.
+  - Only the ALB is publicly accessible.
 
-Every validation run uploads a 30-day report artifact. GitHub Pages publishes only the latest `main` report so a pull request cannot overwrite it.
+- **Least Privilege Security Groups**
+  - ECS accepts traffic only from the ALB Security Group.
 
-## Prerequisites
+- **High Availability**
+  - Multi-AZ deployment across two Availability Zones.
 
-- AWS CLI credentials that may create IAM, VPC, ALB, ECS, and CloudWatch resources for the initial deployment.
-- Terraform 1.x, Git Bash or WSL, and GitHub CLI (`gh`).
-- A public Docker Hub repository named `hello-world-app` (or update the workflow image name).
-- GitHub Actions and GitHub Pages enabled for the repository.
-- A Docker Hub access token with permission to push images.
+- **Cost Optimization**
+  - Single NAT Gateway used for testing and learning purposes.
 
-## Initial infrastructure setup
+---
 
-1. Copy `terraform/terraform.tfvars.example` to `terraform/terraform.tfvars` and set these values:
+# ⚙️ CI/CD Pipeline
 
-   ```hcl
-   aws_region        = "us-east-1"
-   app_name          = "hello-world"
-   container_image   = "YOUR_DOCKERHUB_USER/hello-world-app:bootstrap"
-   github_repository = "YOUR_GITHUB_USER/YOUR_REPOSITORY"
-   ```
+The pipeline is modular and reusable.
 
-   The bootstrap image must already exist in the public Docker Hub repository. It is used only for the first ECS task definition; a `main` deployment replaces it with an immutable commit-SHA image.
+```text
+.github/workflows/
+├── ci.yml
+├── cd.yml
+├── static-analysis.yml
+├── build-and-push.yml
+└── deploy-aws.yml
+```
 
-2. Review and apply the infrastructure manually. From `terraform/`:
+## Workflow Responsibilities
 
-   ```bash
-   terraform init
-   terraform validate
-   terraform plan -out=tfplan
-   terraform apply tfplan
-   ```
+| Workflow | Responsibility |
+|-----------|----------------|
+| **ci.yml** | CI orchestration |
+| **cd.yml** | CD orchestration |
+| **static-analysis.yml** | Build, Unit Tests, Checkstyle, SpotBugs, JaCoCo |
+| **build-and-push.yml** | Docker Build, Trivy Scan, Docker Hub Push |
+| **deploy-aws.yml** | AWS OIDC Authentication & ECS Deployment |
 
-   Read the plan before applying it. It creates the OIDC deployment role, ECS roles, VPC, subnets, NAT gateway, ALB, Fargate cluster/service, task definition, and CloudWatch log group.
+---
 
-3. Authenticate GitHub CLI (`gh auth login`), then run the post-deployment helper from the repository root:
+# 🔄 Pipeline Lifecycle
 
-   ```bash
-   bash scripts/bootstrap.sh
-   ```
+```text
+Developer
+    │
+    ├──────────── Push to Feature Branch ─────────────┐
+    │                                                 │
+    ▼                                                 │
+Static Analysis                                       │
+Build Docker Image                                    │
+Trivy Security Scan                                   │
+    │                                                 │
+    ▼                                                 │
+Developer fixes issues                                │
+                                                      │
+Open Pull Request                                     │
+      │                                               │
+      ▼                                               │
+Run Full CI Validation                               │
+      │                                               │
+      ▼                                               │
+Merge to main                                         │
+      │                                               │
+      ▼                                               │
+Publish Reports to GitHub Pages                       │
+Build & Push Docker Image                             │
+Deploy to Amazon ECS                                  │
+```
 
-   It verifies the Terraform-created IAM role and adds the `AWS_DEPLOY_ROLE_ARN` repository variable. It never runs Terraform commands.
+---
 
-4. In GitHub **Settings → Secrets and variables → Actions**, add:
+# 📋 Prerequisites
 
-   | Type | Name | Value |
-   | --- | --- | --- |
-   | Secret | `DOCKERHUB_TOKEN` | Docker Hub access token |
-   | Variable | `DOCKERHUB_USERNAME` | Docker Hub namespace/user name |
+- AWS Account
+- Docker Hub Account
+- GitHub Account
+- AWS CLI
+- Terraform 1.x+
+- Git
+- GitHub CLI (`gh`)
 
-5. In GitHub **Settings → Pages**, choose **GitHub Actions** as the source. Protect `main` with the pull-request checks `analysis` and `build-and-scan-image`.
+---
 
-6. Push a feature branch, open a pull request to `main`, and merge after checks pass. The `main` workflow publishes and deploys the application. Obtain the endpoint with:
+# 🚀 Setup Guide
 
-   ```bash
-   cd terraform
-   terraform output -raw application_url
-   ```
+## 1. Configure Terraform Variables
 
-## Operations notes
+Copy the example file.
 
-- Terraform ignores ECS task-definition revisions because GitHub Actions registers new revisions during deployment. Terraform continues to manage capacity.
-- State and `terraform.tfvars` are ignored. Use an encrypted remote S3/DynamoDB Terraform backend before team or production use.
-- The deployment workflow targets the `production` GitHub Environment. Configure required reviewers there if deployment approval is needed.
-- Destroy demo infrastructure when finished to prevent charges:
+```bash
+cp terraform/terraform.tfvars.example terraform/terraform.tfvars
+```
 
-  ```bash
-  cd terraform
-  terraform destroy
-  ```
+Update the values.
+
+```hcl
+aws_region        = "us-east-1"
+app_name          = "hello-world"
+container_image   = "YOUR_DOCKERHUB_USERNAME/hello-world-app:bootstrap"
+github_repository = "YOUR_GITHUB_USERNAME/hello-world-cicd"
+```
+
+> **Bootstrap Image**
+>
+> Push an initial image (for example `nginx` or a simple Spring Boot image) tagged as `bootstrap`. This allows ECS to create the service before the CI/CD pipeline publishes the first application image.
+
+---
+
+## 2. Provision AWS Infrastructure
+
+```bash
+cd terraform
+
+terraform init
+terraform validate
+terraform plan -out=tfplan
+terraform apply tfplan
+```
+
+Terraform provisions:
+
+- VPC
+- Public & Private Subnets
+- NAT Gateway
+- Application Load Balancer
+- ECS Cluster
+- ECS Service
+- IAM Roles
+- OIDC Provider
+- CloudWatch Log Group
+
+---
+
+## 3. Bootstrap GitHub
+
+Authenticate using GitHub CLI.
+
+```bash
+gh auth login
+```
+
+Run the bootstrap helper.
+
+```bash
+bash scripts/bootstrap.sh
+```
+
+This automatically configures the GitHub repository variable:
+
+```
+AWS_DEPLOY_ROLE_ARN
+```
+
+---
+
+## 4. Configure GitHub Secrets
+
+Navigate to:
+
+```
+Repository
+→ Settings
+→ Secrets and variables
+→ Actions
+```
+
+### Secrets
+
+| Name |
+|------|
+| DOCKERHUB_TOKEN |
+
+### Variables
+
+| Name |
+|------|
+| DOCKERHUB_USERNAME |
+| AWS_DEPLOY_ROLE_ARN |
+
+---
+
+## 5. Enable GitHub Pages
+
+Navigate to
+
+```
+Settings
+→ Pages
+```
+
+Choose
+
+```
+Build and deployment
+
+Source:
+GitHub Actions
+```
+
+---
+
+# 📈 Verification
+
+After the CD pipeline succeeds:
+
+```bash
+cd terraform
+
+terraform output -raw application_url
+```
+
+Open the returned URL in your browser.
+
+---
+
+# 📊 Static Analysis Reports
+
+After every successful deployment to `main`, GitHub Pages hosts:
+
+- JaCoCo Coverage Report
+- Checkstyle Report
+- SpotBugs Report
+
+---
+
+# 🧹 Clean Up
+
+To avoid AWS charges:
+
+```bash
+cd terraform
+
+terraform destroy
+```
+
+---
+
+# 🛠️ Technologies Used
+
+- Java 17
+- Spring Boot
+- Maven
+- Docker
+- Docker Buildx
+- Trivy
+- GitHub Actions
+- Terraform
+- AWS ECS Fargate
+- Application Load Balancer
+- IAM OIDC
+- CloudWatch
+- GitHub Pages
+
+---
+
+# 📜 License
+
+This repository is intended for educational and demonstration purposes as part of a DevOps CI/CD assignment.
