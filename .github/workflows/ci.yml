@@ -33,8 +33,7 @@ jobs:
     uses: ./.github/workflows/build-and-push.yml
     with:
       image-tag: ${{ github.sha }}
-      # PR builds never publish, so no Docker Hub namespace is required.
-      dockerhub-username: local
+      dockerhub-username: ${{ vars.DOCKERHUB_USERNAME }}
       publish-image: false
       publish-latest: false
       run-trivy: true

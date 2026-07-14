@@ -11,6 +11,7 @@ Ensure the following are installed and configured:
 - AWS CLI (authenticated with an account that can create IAM, VPC, ALB, ECS, etc.)
 - Terraform 1.x+
 - Git
+- GitHub CLI (`gh`)
 - Docker
 
 Copy the Terraform variables example file:
@@ -24,14 +25,15 @@ Update the values:
 ```hcl
 aws_region        = "us-east-1"
 app_name          = "hello-world"
-cluster_name      = "platform-apps-dev-cluster"
-container_image   = "YOUR_DOCKERHUB_USERNAME/hello-world-app:bootstrap" #  or give public.ecr.aws/nginx/nginx:latest
+container_image   = "YOUR_DOCKERHUB_USERNAME/hello-world-app:bootstrap"
 github_repository = "YOUR_GITHUB_USERNAME/YOUR_REPOSITORY"
 ```
 
 > 💡 **Bootstrap Image**
 >
-The nginx/bootstrap image allows ECS to create the initial service before the CI/CD pipeline publishes the first application image.Subsequent deployment then overrides the bootstrap image with the actual docker image during CD deployment.
+> Before provisioning the infrastructure, push a temporary Docker image tagged as **`bootstrap`** (for example `nginx` or a simple Spring Boot application) to your Docker Hub repository.
+>
+> Docker Hub automatically creates the repository on the first push. The bootstrap image allows ECS to create the initial service before the CI/CD pipeline publishes the first application image.
 
 ---
 
@@ -66,13 +68,19 @@ This provisions:
 
 ### 3. Configure GitHub Integration
 
+Authenticate with GitHub CLI:
+
+```bash
+gh auth login
+```
+
 Run the bootstrap helper script from the repository root:
 
 ```bash
-bash scripts/bootstrap.sh production
+bash scripts/bootstrap.sh
 ```
 
-The script verifies the IAM role and writes a ready-to-commit configuration file at [`.github/deployments/production.json`](../.github/deployments/production.json). Commit it on a branch and open a pull request. Do not add credentials to this file.
+The script automatically retrieves Terraform outputs and registers them as GitHub repository variables.
 
 Next, configure the following GitHub Actions credentials:
 
@@ -84,28 +92,13 @@ Next, configure the following GitHub Actions credentials:
 |------|-------------|
 | `DOCKERHUB_TOKEN` | Docker Hub Personal Access Token with push permissions |
 
-#### Reviewed deployment configuration
+#### Variables
 
-The following non-secret values are committed in `.github/deployments/<environment>.json` and are read by the deployment workflow. Any change should go through a pull request:
-
-| JSON field | Description |
+| Name | Description |
 |------|-------------|
-| `environment` | GitHub environment name and configuration filename |
-| `app_name` | Canonical application identifier generated from Terraform; it must match the Maven `artifactId` |
-| `dockerhub_username` | Docker Hub username/namespace |
-| `aws_deploy_role_arn` | IAM role ARN created by Terraform |
-| `aws_region`, `ecs_cluster`, `ecs_service`, `ecs_task_family` | Deployment target values |
-
-`application_url` is an informational Terraform output; it is not needed by the workflow.
-
-To add the remaining promotion environments, apply their Terraform configurations and generate their files:
-
-```bash
-bash scripts/bootstrap.sh int
-bash scripts/bootstrap.sh production
-```
-
-The CD workflow deploys `dev` after a push to `main`, then promotes the same immutable image to `int` and `production` in order. In GitHub **Settings → Environments**, create `int` and `production` and configure their required reviewers. Each job pauses until the required approval is granted.
+| `DOCKERHUB_USERNAME` | Docker Hub username/namespace |
+| `AWS_DEPLOY_ROLE_ARN` | IAM Role ARN created by Terraform (added automatically by the bootstrap script) |
+| `AWS_REGION`, `ECS_CLUSTER`, `ECS_SERVICE`, `ECS_TASK_FAMILY`, `APPLICATION_URL` | Deployment target values, added automatically by the bootstrap script |
 
 ---
 
