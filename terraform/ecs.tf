@@ -4,7 +4,7 @@ resource "aws_cloudwatch_log_group" "app" {
 }
 
 resource "aws_ecs_cluster" "this" {
-  name = "${var.app_name}-cluster"
+  name = var.cluster_name
 }
 
 resource "aws_ecs_task_definition" "app" {
