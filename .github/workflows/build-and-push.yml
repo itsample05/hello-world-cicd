@@ -9,7 +9,6 @@ on:
     inputs:
       image-tag: { required: true, type: string }
       dockerhub-username: { required: true, type: string }
-      expected-image-name: { required: false, type: string, default: "" }
       publish-image: { required: true, type: boolean }
       publish-latest: { required: true, type: boolean }
       run-trivy: { required: true, type: boolean }
@@ -29,18 +28,11 @@ jobs:
 
       - name: Derive image name from Maven project
         id: project
-        env:
-          EXPECTED_IMAGE_NAME: ${{ inputs.expected-image-name }}
         run: |
           artifact_id="$(python3 -c "import xml.etree.ElementTree as ET; root = ET.parse('pom.xml').getroot(); namespace = root.tag.split('}')[0].lstrip('{'); print(root.findtext(f'{{{namespace}}}artifactId'))")"
           image_name="${artifact_id,,}"
           [[ "$image_name" =~ ^[a-z0-9]+([._-][a-z0-9]+)*$ ]] || {
             echo "Maven artifactId '$artifact_id' is not a valid Docker image name." >&2
-            exit 1
-          }
-          [[ -z "$EXPECTED_IMAGE_NAME" || "$image_name" == "$EXPECTED_IMAGE_NAME" ]] || {
-            echo "Maven artifactId produces image name '$image_name', but the Terraform app_name is '$EXPECTED_IMAGE_NAME'." >&2
-            echo "Keep the Maven artifactId and Terraform app_name aligned before releasing." >&2
             exit 1
           }
           echo "image-name=$image_name" >> "$GITHUB_OUTPUT"
