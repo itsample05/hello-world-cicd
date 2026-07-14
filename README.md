@@ -85,37 +85,7 @@ Points worth calling out for a security/efficiency review:
 
 ## One-time setup
 
-GitHub Actions can't deploy the AWS role it needs until that role exists, so the very first deployment is done locally and reviewed by hand — see [`docs/aws-bootstrap.md`](docs/aws-bootstrap.md) for the full walkthrough.
-
-1. Copy `terraform/terraform.tfvars.example` to `terraform/terraform.tfvars` and fill in your values.
-2. From `terraform/`, review and apply manually:
-
-   ```bash
-   terraform init
-   terraform validate
-   terraform plan -out=tfplan
-   # review the plan, then:
-   terraform apply tfplan
-   ```
-
-3. From the repository root, verify the created role and register it with GitHub:
-
-   ```bash
-   bash scripts/bootstrap.sh
-   ```
-
-   This script only reads Terraform outputs and calls `aws iam get-role` / `gh variable set` — it never runs `terraform init`, `plan`, or `apply`.
-
-4. In **Settings → Secrets and variables → Actions**, add:
-
-   | Type | Name | Value |
-   | --- | --- | --- |
-   | Secret | `DOCKERHUB_TOKEN` | Docker Hub access token |
-   | Variable | `DOCKERHUB_USERNAME` | Docker Hub namespace/user name |
-   | Variable | `AWS_DEPLOY_ROLE_ARN` | set automatically by `bootstrap.sh` |
-
-5. In **Settings → Pages**, choose **GitHub Actions** as the build source.
-6. Push a feature branch, open a PR into `main`, and merge once checks pass. The `main` workflow publishes the image and deploys it. Grab the public URL from the Terraform output `application_url`.
+GitHub Actions can't deploy the AWS role it needs until that role exists, so the very first deployment is done locally and reviewed by hand — see [`docs/onetimesetup.md`](docs/onetimesetup.md) for the full walkthrough.
 
 ## Operational notes
 
