@@ -2,8 +2,11 @@ name: Build, scan, and optionally publish image
 
 on:
   workflow_call:
+    outputs:
+      image-name:
+        description: "Docker image name derived from the Maven artifactId"
+        value: ${{ jobs.build-and-scan-image.outputs.image-name }}
     inputs:
-      image-name: { required: true, type: string }
       image-tag: { required: true, type: string }
       dockerhub-username: { required: true, type: string }
       publish-image: { required: true, type: boolean }
@@ -15,11 +18,24 @@ on:
 jobs:
   build-and-scan-image:
     runs-on: ubuntu-latest
+    outputs:
+      image-name: ${{ steps.project.outputs.image-name }}
     permissions:
       contents: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Derive image name from Maven project
+        id: project
+        run: |
+          artifact_id="$(python3 -c "import xml.etree.ElementTree as ET; root = ET.parse('pom.xml').getroot(); namespace = root.tag.split('}')[0].lstrip('{'); print(root.findtext(f'{{{namespace}}}artifactId'))")"
+          image_name="${artifact_id,,}"
+          [[ "$image_name" =~ ^[a-z0-9]+([._-][a-z0-9]+)*$ ]] || {
+            echo "Maven artifactId '$artifact_id' is not a valid Docker image name." >&2
+            exit 1
+          }
+          echo "image-name=$image_name" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -31,9 +47,9 @@ jobs:
           load: true
           push: false
           tags: |
-            local/${{ inputs.image-name }}:${{ inputs.image-tag }}
-            ${{ inputs.publish-image && format('{0}/{1}:{2}', inputs.dockerhub-username, inputs.image-name, inputs.image-tag) || '' }}
-            ${{ inputs.publish-image && inputs.publish-latest && format('{0}/{1}:latest', inputs.dockerhub-username, inputs.image-name) || '' }}
+            local/${{ steps.project.outputs.image-name }}:${{ inputs.image-tag }}
+            ${{ inputs.publish-image && format('{0}/{1}:{2}', inputs.dockerhub-username, steps.project.outputs.image-name, inputs.image-tag) || '' }}
+            ${{ inputs.publish-image && inputs.publish-latest && format('{0}/{1}:latest', inputs.dockerhub-username, steps.project.outputs.image-name) || '' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -42,7 +58,7 @@ jobs:
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: 'image'
-          scan-ref: local/${{ inputs.image-name }}:${{ inputs.image-tag }}
+          scan-ref: local/${{ steps.project.outputs.image-name }}:${{ inputs.image-tag }}
           format: table
           exit-code: '1'
           ignore-unfixed: true
@@ -58,7 +74,7 @@ jobs:
       - name: Publish scanned Docker image
         if: ${{ inputs.publish-image }}
         run: |
-          docker push "${{ inputs.dockerhub-username }}/${{ inputs.image-name }}:${{ inputs.image-tag }}"
+          docker push "${{ inputs.dockerhub-username }}/${{ steps.project.outputs.image-name }}:${{ inputs.image-tag }}"
           if [ "${{ inputs.publish-latest }}" = "true" ]; then
-            docker push "${{ inputs.dockerhub-username }}/${{ inputs.image-name }}:latest"
+            docker push "${{ inputs.dockerhub-username }}/${{ steps.project.outputs.image-name }}:latest"
           fi

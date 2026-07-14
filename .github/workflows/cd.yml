@@ -26,7 +26,6 @@ jobs:
     needs: static-analysis
     uses: ./.github/workflows/build-and-push.yml
     with:
-      image-name: hello-world-app
       image-tag: ${{ github.sha }}
       dockerhub-username: ${{ vars.DOCKERHUB_USERNAME }}
       publish-image: true
@@ -39,9 +38,9 @@ jobs:
     uses: ./.github/workflows/deploy-aws.yml
     secrets: inherit
     with:
-      image: ${{ vars.DOCKERHUB_USERNAME }}/hello-world-app:${{ github.sha }}
-      aws-region: us-east-1
+      image: ${{ vars.DOCKERHUB_USERNAME }}/${{ needs.build-and-scan-image.outputs.image-name }}:${{ github.sha }}
+      aws-region: ${{ vars.AWS_REGION }}
       role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
-      cluster: hello-world-cluster
-      service: hello-world-service
-      task-family: hello-world-task
+      cluster: ${{ vars.ECS_CLUSTER }}
+      service: ${{ vars.ECS_SERVICE }}
+      task-family: ${{ vars.ECS_TASK_FAMILY }}
