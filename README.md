@@ -60,11 +60,13 @@ The ECS service's desired count is derived from the number of private subnets �
 | --- | --- | --- |
 | Push to any non-`main` branch | Maven tests, package build, Checkstyle, SpotBugs, JaCoCo report | None — no container build, image push, or deployment |
 | Pull request targeting `main` | Same Maven validation, plus a **local** Docker build and Trivy vulnerability scan | None — no Docker Hub login/push, no deployment |
-| Push or merge to `main` | Full pipeline: Maven validation, quality report published to Pages, Docker build, Trivy scan, immutable SHA-tagged image push, `latest` tag push, ECS rolling deployment | Publishes to Docker Hub **and** deploys to ECS |
+| Push or merge to `main` | Full pipeline: Maven validation, quality report published to Pages, Docker build, Trivy scan, immutable SHA-tagged image push, automatic ECS deployment to `dev`, then sequential promotion to `int` and `production` | Publishes to Docker Hub and deploys to ECS |
 
 Image tags use the Git commit SHA, so ECS always deploys an immutable, traceable artifact — `latest` is a convenience tag only, never what's actually deployed. Every analysis run (including feature branches) uploads a 30-day downloadable Actions artifact even when it isn't published to Pages.
 
 The Docker repository name is derived automatically from the top-level Maven `artifactId` in `pom.xml` (currently `hello-world`), so changing the application artifact name does not require workflow edits.
+
+Terraform `app_name` is the canonical application identifier. The release workflow verifies that it matches the Maven `artifactId` before it publishes an image, preventing an application image from being deployed to a differently named ECS service.
 
 ## AWS design decisions
 
@@ -82,7 +84,7 @@ Points worth calling out for a security/efficiency review:
 - An AWS account with permission to perform the one-time bootstrap, plus AWS CLI credentials configured locally.
 - Terraform 1.x and Git Bash or WSL.
 - A GitHub repository with Actions enabled.
-- A Docker Hub access token (`DOCKERHUB_TOKEN`) and username (`DOCKERHUB_USERNAME`).
+- A Docker Hub access token stored as the `DOCKERHUB_TOKEN` GitHub Actions secret.
 - GitHub Pages configured to use **GitHub Actions** as its source.
 
 ## One-time setup
@@ -92,6 +94,8 @@ GitHub Actions can't deploy the AWS role it needs until that role exists, so the
 ## Operational notes
 
 - Terraform state and `terraform.tfvars` are gitignored. For team/production use, configure a remote encrypted backend (S3 + DynamoDB lock table) before sharing this infrastructure.
+- Deployment target values are versioned per environment in [`.github/deployments/`](.github/deployments/), so changes are reviewed in a pull request instead of being overwritten as GitHub repository variables. Keep secrets such as `DOCKERHUB_TOKEN` in GitHub Secrets.
+- A `main` release always deploys in order: `dev` → `int` → `production`. Configure required reviewers in GitHub **Settings → Environments** for `int` and `production`; the workflow pauses at each protected environment before deployment.
 - Protect `main` with the `CI` workflow as a required status check so nothing merges unvalidated.
 - Tear down with `terraform destroy` from `terraform/` when done, since the NAT gateway isn't Free Tier.
 

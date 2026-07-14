@@ -5,12 +5,18 @@ variable "aws_region" {
 
 variable "app_name" {
   type    = string
-  default = "hello-world"
+  default = "test"
+}
+
+variable "cluster_name" {
+  type        = string
+  description = "Shared ECS cluster name that can host multiple application services"
+  default     = "platform-test-cluster"
 }
 
 variable "container_image" {
   type    = string
-  default = "hello-world:bootstrap"
+  default = "public.ecr.aws/nginx/nginx:latest"
 }
 
 variable "github_repository" {
