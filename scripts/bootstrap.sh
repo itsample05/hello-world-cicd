@@ -63,6 +63,13 @@ ecs_cluster="$(terraform output -raw ecs_cluster_name)"
 ecs_service="$(terraform output -raw ecs_service_name)"
 ecs_task_family="$(terraform output -raw ecs_task_family)"
 application_url="$(terraform output -raw application_url)"
+dockerhub_username="${github_repository%%/*}"
+
+# Existing state created before the app_name output was introduced can still
+# produce a configuration file. The task family is always <app_name>-task.
+if ! app_name="$(terraform output -raw app_name 2>/dev/null)"; then
+  app_name="${ecs_task_family%-task}"
+fi
 
 # Existing state created before the app_name output was introduced can still
 # produce a configuration file. The task family is always <app_name>-task.
