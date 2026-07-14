@@ -32,7 +32,6 @@ jobs:
     if: ${{ github.event_name == 'pull_request' }}
     uses: ./.github/workflows/build-and-push.yml
     with:
-      image-name: hello-world-app
       image-tag: ${{ github.sha }}
       dockerhub-username: ${{ vars.DOCKERHUB_USERNAME }}
       publish-image: false

@@ -64,11 +64,13 @@ The ECS service's desired count is derived from the number of private subnets â€
 
 Image tags use the Git commit SHA, so ECS always deploys an immutable, traceable artifact â€” `latest` is a convenience tag only, never what's actually deployed. Every analysis run (including feature branches) uploads a 30-day downloadable Actions artifact even when it isn't published to Pages.
 
+The Docker repository name is derived automatically from the top-level Maven `artifactId` in `pom.xml` (currently `hello-world`), so changing the application artifact name does not require workflow edits.
+
 ## AWS design decisions
 
 Points worth calling out for a security/efficiency review:
 
-- **No long-lived AWS credentials in GitHub.** The deploy job authenticates via the GitHub OIDC provider (`iam.tf`) and assumes a role scoped by the `sub` claim to `refs/heads/main` (and `master`) of this specific repository only.
+- **No long-lived AWS credentials in GitHub.** The deploy job authenticates via the GitHub OIDC provider (`iam.tf`) and assumes a role restricted to the configured repository, while allowing its branches and GitHub Environments.
 - **Segmented network.** ALB lives in public subnets; ECS tasks live in private subnets with no public IP. The tasks' security group only accepts inbound 8080 from the ALB's security group (referenced by ID, not by CIDR).
 - **Scoped `iam:PassRole`.** The GitHub deploy role can only pass the two roles ECS actually needs (execution + task role), not `*`.
 - **Deployment safety net.** ECS `deployment_circuit_breaker` is enabled with automatic rollback, and the ALB health check targets `/actuator/health` so a bad deploy doesn't stay in rotation.

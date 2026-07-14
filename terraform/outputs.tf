@@ -9,3 +9,19 @@ output "github_deploy_role_arn" {
 output "github_repository" {
   value = var.github_repository
 }
+
+output "aws_region" {
+  value = var.aws_region
+}
+
+output "ecs_cluster_name" {
+  value = aws_ecs_cluster.this.name
+}
+
+output "ecs_service_name" {
+  value = aws_ecs_service.app.name
+}
+
+output "ecs_task_family" {
+  value = aws_ecs_task_definition.app.family
+}

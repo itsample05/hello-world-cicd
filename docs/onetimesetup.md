@@ -80,7 +80,7 @@ Run the bootstrap helper script from the repository root:
 bash scripts/bootstrap.sh
 ```
 
-The script automatically retrieves the AWS Deployment Role ARN created by Terraform and registers it as a GitHub repository variable.
+The script automatically retrieves Terraform outputs and registers them as GitHub repository variables.
 
 Next, configure the following GitHub Actions credentials:
 
@@ -98,6 +98,7 @@ Next, configure the following GitHub Actions credentials:
 |------|-------------|
 | `DOCKERHUB_USERNAME` | Docker Hub username/namespace |
 | `AWS_DEPLOY_ROLE_ARN` | IAM Role ARN created by Terraform (added automatically by the bootstrap script) |
+| `AWS_REGION`, `ECS_CLUSTER`, `ECS_SERVICE`, `ECS_TASK_FAMILY`, `APPLICATION_URL` | Deployment target values, added automatically by the bootstrap script |
 
 ---
 
