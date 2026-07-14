@@ -11,8 +11,8 @@ Usage: bash scripts/bootstrap.sh <environment>
 Reads deployment values from the existing Terraform state and verifies the IAM
 role. It writes a non-secret JSON configuration file that is read by the
 deployment workflow at .github/deployments/<environment>.json. The Docker Hub
-namespace defaults to the owner of github_repository in Terraform; edit the
-generated JSON in your pull request if the Docker Hub namespace is different.
+namespace is read from a Docker Hub container_image when possible. For another
+registry, bootstrap asks for the Docker Hub namespace interactively.
 
 Commit the generated file on a branch and merge it through a pull request.
 This script does not run terraform init, plan, or apply, and does not change
@@ -63,13 +63,39 @@ ecs_cluster="$(terraform output -raw ecs_cluster_name)"
 ecs_service="$(terraform output -raw ecs_service_name)"
 ecs_task_family="$(terraform output -raw ecs_task_family)"
 application_url="$(terraform output -raw application_url)"
-dockerhub_username="${github_repository%%/*}"
 
 # Existing state created before the app_name output was introduced can still
 # produce a configuration file. The task family is always <app_name>-task.
 if ! app_name="$(terraform output -raw app_name 2>/dev/null)"; then
   app_name="${ecs_task_family%-task}"
 fi
+
+# Terraform records container_image after apply. Older state does not have the
+# output, in which case bootstrap asks for the Docker Hub namespace.
+container_image="$(terraform output -raw container_image 2>/dev/null || true)"
+dockerhub_username=""
+
+if [[ -n "$container_image" ]]; then
+  image_without_digest="${container_image%@*}"
+  image_path="${image_without_digest%:*}"
+  first_segment="${image_path%%/*}"
+
+  if [[ "$image_path" == docker.io/* || "$image_path" == index.docker.io/* || "$image_path" == registry-1.docker.io/* ]]; then
+    image_path="${image_path#*/}"
+    dockerhub_username="${image_path%%/*}"
+  elif [[ "$image_path" == */* && "$first_segment" != *.* && "$first_segment" != *:* ]]; then
+    dockerhub_username="$first_segment"
+  fi
+fi
+
+if [[ ! "$dockerhub_username" =~ ^[a-z0-9]+([._-][a-z0-9]+)*$ ]]; then
+  read -r -p "Docker Hub username/namespace: " dockerhub_username
+fi
+
+[[ "$dockerhub_username" =~ ^[a-z0-9]+([._-][a-z0-9]+)*$ ]] || {
+  echo "A valid Docker Hub username/namespace is required." >&2
+  exit 1
+}
 
 [[ "$role_arn" =~ ^arn:aws:iam::[0-9]{12}:role/.+$ ]] || {
   echo "Terraform output github_deploy_role_arn is not a valid IAM role ARN: $role_arn" >&2

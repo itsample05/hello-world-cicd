@@ -1,7 +1,7 @@
 {
   "environment": "dev",
   "app_name": "hello-world",
-  "dockerhub_username": "itsample05",
+  "dockerhub_username": "dockerswat05",
   "aws_region": "us-east-1",
   "aws_deploy_role_arn": "arn:aws:iam::136889124753:role/hello-world-github-deploy",
   "ecs_cluster": "platform-apps-dev-cluster",

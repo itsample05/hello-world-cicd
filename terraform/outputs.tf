@@ -18,6 +18,10 @@ output "app_name" {
   value = var.app_name
 }
 
+output "container_image" {
+  value = var.container_image
+}
+
 output "ecs_cluster_name" {
   value = aws_ecs_cluster.this.name
 }

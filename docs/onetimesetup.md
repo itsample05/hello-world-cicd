@@ -74,6 +74,8 @@ bash scripts/bootstrap.sh production
 
 The script verifies the IAM role and writes a ready-to-commit configuration file at [`.github/deployments/production.json`](../.github/deployments/production.json). Commit it on a branch and open a pull request. Do not add credentials to this file.
 
+If `container_image` is a Docker Hub image such as `my-docker-user/hello-world:bootstrap`, bootstrap uses `my-docker-user` automatically. If it is an ECR image, another registry, or does not include a namespace, bootstrap prompts for the Docker Hub username used by CD.
+
 Next, configure the following GitHub Actions credentials:
 
 **Repository → Settings → Secrets and variables → Actions**
