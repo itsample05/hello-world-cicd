@@ -101,52 +101,6 @@ Next, configure the following GitHub Actions credentials:
 
 ---
 
-### 4. Enable GitHub Pages
+### 4. In **Settings → Pages**, choose **GitHub Actions** as the build source.
+### 5. Push a feature branch, open a PR into `main`, and merge once checks pass. The `main` workflow publishes the image and deploys it. Grab the public URL from the Terraform output `application_url`
 
-Navigate to:
-
-```
-Repository Settings
-→ Pages
-```
-
-Configure:
-
-```
-Build and deployment
-Source: GitHub Actions
-```
-
-This allows the CD pipeline to publish the latest JaCoCo, Checkstyle, and SpotBugs reports automatically after successful deployments to the `main` branch.
-
----
-
-### 5. Deploy & Verify
-
-1. Push a feature branch.
-2. Open a Pull Request targeting `main`.
-3. Ensure all CI checks pass.
-4. Merge the Pull Request.
-5. The CD pipeline will:
-   - Publish static analysis reports to GitHub Pages
-   - Build and push the Docker image to Docker Hub
-   - Deploy the latest image to Amazon ECS using GitHub OIDC authentication
-
-Retrieve the public application endpoint:
-
-```bash
-cd terraform
-
-terraform output -raw application_url
-```
-
-Open the returned URL in your browser to verify the deployment.
-
----
-To destroy the aws infra since its a free tier account for demo purpose only.
-
-> ```bash
-> cd terraform
->
-> terraform destroy
-> ```
